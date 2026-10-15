@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+alembic
+pydantic
+python-multipart
+numpy
+pandas
+scipy
+scikit-learn
+reportlab
+httpx
+pytest
+psycopg[binary]

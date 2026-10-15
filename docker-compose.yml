@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: sqlite:////data/arthritrack.db
+      ALLOWED_ORIGINS: http://localhost:5173
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    volumes:
+      - health-data:/data
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:5173:80"
+    depends_on:
+      - backend
+volumes:
+  health-data:
