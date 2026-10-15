@@ -6,7 +6,7 @@ from typing import Literal
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ConfigDict, model_validator
-from sqlalchemy import create_engine, select, ForeignKey, String, JSON, event
+from sqlalchemy import create_engine, select, ForeignKey, String, JSON, event, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from services.analytics import analyse, explain
 from services.reports import make_pdf
@@ -78,11 +78,22 @@ class Assessment(Strict):
     total_frames:int=Field(ge=1,le=100000)
     interruptions:int=Field(ge=0,le=10000)
     quality_reasons:list[str]=Field(default_factory=list,max_length=20)
-    algorithm_version:Literal['prototype-2']='prototype-2'
+    algorithm_version:Literal['prototype-2','prototype-3']='prototype-2'
+    protocol_version:str|None=Field(default=None,max_length=50)
+    model_version:str|None=Field(default=None,max_length=160)
+    measurement_unit:Literal['degrees','palm_widths']|None=None
+    repetition_target:int|None=Field(default=None,ge=1,le=100)
+    accepted_duration_seconds:float|None=Field(default=None,ge=0,le=300)
+    calibration_status:Literal['SUFFICIENT','LIMITED','INSUFFICIENT']|None=None
+    calibration_span:float|None=Field(default=None,ge=0,le=10000)
+    per_finger:dict=Field(default_factory=dict,max_length=8)
+    cycle_repeatability:float|None=Field(default=None,ge=0,le=100)
+    client_assessment_id:str|None=Field(default=None,min_length=8,max_length=80)
     @model_validator(mode='after')
     def validate_frames(self):
         if self.usable_frames>self.total_frames: raise ValueError('Usable frames exceed total')
         if self.recorded_at.tzinfo is None: raise ValueError('Timezone required')
+        if self.algorithm_version=='prototype-3' and (not self.protocol_version or not self.model_version or not self.measurement_unit or not self.repetition_target or not self.client_assessment_id): raise ValueError('Prototype-3 measurement provenance is incomplete')
         return self
 class Symptom(Strict):
     recorded_at:datetime=Field(default_factory=lambda:datetime.now(timezone.utc))
@@ -160,18 +171,36 @@ def put_profile(payload:Profile,user=Depends(identity),db=Depends(db_session)):
     if payload.consented and not user.profile.get('consented'): add(db,user,'consents','real',{'version':'2026-1','accepted_at':now(),'scope':'measurements, symptoms, routines, deterministic explanations'})
     user.profile=payload.model_dump(); db.commit(); return user.profile
 @app.get('/api/assessments')
-def assessments(user=Depends(identity),db=Depends(db_session),m=Depends(mode),offset:int=Query(0,ge=0),limit:int=Query(200,ge=1,le=500)): return rows(db,user,'assessments',m)[offset:offset+limit]
+def assessments(user=Depends(identity),db=Depends(db_session),m=Depends(mode),offset:int=Query(0,ge=0),limit:int=Query(200,ge=1,le=500)):
+    query=select(Record).where(Record.user_id==user.id,Record.kind=='assessments',Record.mode==m).order_by(Record.id).offset(offset).limit(limit)
+    return [unpack(r) for r in db.scalars(query).all()]
+@app.get('/api/assessments/summary')
+def assessment_summary(user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
+    query=select(Record).where(Record.user_id==user.id,Record.kind=='assessments',Record.mode==m)
+    total=db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    valid=[unpack(r) for r in db.scalars(query).all() if r.data.get('quality_status') in ('VALID','SUFFICIENT_CAPTURE')]
+    return {'total_count':total,'latest':max(valid,key=lambda r:datetime.fromisoformat(r['recorded_at'].replace('Z','+00:00'))) if valid else None}
 @app.post('/api/assessments')
 def save_assessment(payload:Assessment,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    consent(user,m); data=payload.model_dump(mode='json'); ratio=payload.usable_frames/payload.total_frames
+    consent(user,m)
+    if payload.client_assessment_id:
+        existing=next((unpack(r) for r in records(db,user,'assessments',m) if r.data.get('client_assessment_id')==payload.client_assessment_id),None)
+        if existing:return existing
+    data=payload.model_dump(mode='json'); ratio=payload.usable_frames/payload.total_frames; accepted=payload.accepted_duration_seconds if payload.accepted_duration_seconds is not None else payload.duration_seconds
     data['tracking_quality']=round(ratio*100,1)
-    data['quality_status']='VALID' if ratio>=.85 and payload.repetition_count>=3 and payload.duration_seconds>=5 and payload.interruptions<=5 else 'UNCERTAIN' if ratio>=.65 and payload.repetition_count>=1 else 'RETRY_REQUIRED'
+    data['server_received_at']=now()
+    data['quality_status']='SUFFICIENT_CAPTURE' if payload.usable_frames>=30 and accepted>=3 and ratio>=.85 and payload.repetition_count>=3 and payload.duration_seconds>=5 and payload.interruptions<=5 else 'LIMITED_CAPTURE' if payload.usable_frames>=10 and accepted>=1 and ratio>=.65 and payload.repetition_count>=1 else 'RETRY_RECOMMENDED'
     return add(db,user,'assessments',m,data)
 @app.get('/api/assessments/{rid}')
 def assessment(rid:int,user=Depends(identity),db=Depends(db_session),m=Depends(mode)): return unpack(owned(db,user,'assessments',m,rid))
 @app.delete('/api/assessments/{rid}')
 def delete_assessment(rid:int,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    db.delete(owned(db,user,'assessments',m,rid)); db.commit(); return {'deleted':True}
+    db.delete(owned(db,user,'assessments',m,rid))
+    affected=0
+    for report in records(db,user,'reports',m):
+        before=report.data.get('assessments',[]); after=[item for item in before if item.get('id')!=rid]
+        if len(after)!=len(before): report.data={**report.data,'assessments':after,'source_deletions':[*(report.data.get('source_deletions') or []),{'kind':'assessment','id':rid,'deleted_at':now()}]};affected+=1
+    db.commit(); return {'deleted':True,'report_snapshots_updated':affected}
 @app.get('/api/symptoms')
 def symptoms(user=Depends(identity),db=Depends(db_session),m=Depends(mode)): return rows(db,user,'symptoms',m)
 @app.post('/api/symptoms')
@@ -179,7 +208,7 @@ def save_symptom(payload:Symptom,user=Depends(identity),db=Depends(db_session),m
     consent(user,m); return add(db,user,'symptoms',m,payload.model_dump(mode='json'))
 @app.put('/api/symptoms/{rid}')
 def edit_symptom(rid:int,payload:Symptom,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    row=owned(db,user,'symptoms',m,rid); row.data=payload.model_dump(mode='json'); db.commit(); return unpack(row)
+    consent(user,m);row=owned(db,user,'symptoms',m,rid); row.data=payload.model_dump(mode='json'); db.commit(); return unpack(row)
 @app.delete('/api/symptoms/{rid}')
 def delete_symptom(rid:int,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
     db.delete(owned(db,user,'symptoms',m,rid)); db.commit(); return {'deleted':True}
@@ -190,7 +219,7 @@ def save_routine(payload:Routine,user=Depends(identity),db=Depends(db_session),m
     consent(user,m); return add(db,user,'routines',m,payload.model_dump(mode='json'))
 @app.put('/api/routines/{rid}')
 def edit_routine(rid:int,payload:Routine,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    row=owned(db,user,'routines',m,rid); row.data=payload.model_dump(mode='json'); db.commit(); return unpack(row)
+    consent(user,m);row=owned(db,user,'routines',m,rid); row.data=payload.model_dump(mode='json'); db.commit(); return unpack(row)
 @app.delete('/api/routines/{rid}')
 def delete_routine(rid:int,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
     db.delete(owned(db,user,'routines',m,rid))
@@ -204,7 +233,7 @@ def item_logs(rid:int,user=Depends(identity),db=Depends(db_session),m=Depends(mo
     owned(db,user,'routines',m,rid); return [r for r in rows(db,user,'logs',m) if r['routine_id']==rid]
 @app.post('/api/routines/{rid}/logs')
 def log(rid:int,payload:RoutineLog,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    owned(db,user,'routines',m,rid); data={**payload.model_dump(mode='json'),'routine_id':rid,'logged_at':now()}
+    consent(user,m);owned(db,user,'routines',m,rid); data={**payload.model_dump(mode='json'),'routine_id':rid,'logged_at':now()}
     for row in records(db,user,'logs',m):
         if row.data['routine_id']==rid and row.data['scheduled_date']==str(payload.scheduled_date): row.data=data; db.commit(); return unpack(row)
     return add(db,user,'logs',m,data)
@@ -216,15 +245,17 @@ def trends(hand:Literal['left','right']='left',assessment_type:Literal['fist','s
 @app.post('/api/companion/message')
 @app.post('/api/insights/generate')
 def message(payload:Message,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    result=validated_explanation(explain(payload.message,analyse(rows(db,user,'assessments',m),payload.hand,payload.assessment_type),rows(db,user,'symptoms',m))); return add(db,user,'insights',m,{'prompt':payload.message,**result,'created_at':now()})
+    consent(user,m);result=validated_explanation(explain(payload.message,analyse(rows(db,user,'assessments',m),payload.hand,payload.assessment_type),rows(db,user,'symptoms',m))); return add(db,user,'insights',m,{'prompt':payload.message,**result,'created_at':now()})
 @app.get('/api/insights')
 def insights(user=Depends(identity),db=Depends(db_session),m=Depends(mode)): return rows(db,user,'insights',m)
 @app.post('/api/reports/preview')
 def preview(payload:Report,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    content=payload.model_dump(mode='json'); content['mode']=m; content['created_at']=now()
+    consent(user,m);content=payload.model_dump(mode='json'); content['mode']=m; content['created_at']=now()
     for kind in payload.sections:
         items=rows(db,user,kind,m)
         content[kind]=[r for r in items if str(payload.start)<=r.get('recorded_at','')[:10]<=str(payload.end)] if kind!='routines' else [r for r in items if r['start_date']<=str(payload.end) and (not r.get('end_date') or r['end_date']>=str(payload.start))]
+        if kind=='assessments':
+            content[kind]=[{**r,'measurement_unit':r.get('measurement_unit') or ('palm_widths' if r.get('assessment_type')=='opposition' else 'degrees')} for r in content[kind]]
     content['logs']=[r for r in rows(db,user,'logs',m) if str(payload.start)<=r['scheduled_date']<=str(payload.end)] if 'routines' in payload.sections else []
     content['baselines']=[{'hand':h,'type':t,**analyse([r for r in rows(db,user,'assessments',m) if r['recorded_at'][:10]<=str(payload.end)],h,t)} for h in ['left','right'] for t in ['fist','spread','opposition']] if 'assessments' in payload.sections else []
     return add(db,user,'reports',m,content)
@@ -233,6 +264,9 @@ def export(payload:Export,user=Depends(identity),db=Depends(db_session),m=Depend
     return Response(make_pdf(unpack(owned(db,user,'reports',m,payload.report_id))),media_type='application/pdf',headers={'Content-Disposition':'attachment; filename="ArthriTrack-summary.pdf"'})
 @app.get('/api/reports')
 def reports(user=Depends(identity),db=Depends(db_session),m=Depends(mode)): return rows(db,user,'reports',m)
+@app.delete('/api/reports/{rid}')
+def delete_report(rid:int,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
+    db.delete(owned(db,user,'reports',m,rid));db.commit();return {'deleted':True}
 @app.get('/api/data/export')
 def data_export(user=Depends(identity),db=Depends(db_session)): return {'profile':user.profile,'records':[{'kind':r.kind,'mode':r.mode,**unpack(r)} for r in db.scalars(select(Record).where(Record.user_id==user.id)).all()]}
 @app.delete('/api/data/account')

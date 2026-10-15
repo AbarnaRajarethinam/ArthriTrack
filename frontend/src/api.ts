@@ -3,7 +3,9 @@ export type Profile = { preferred_name: string; age_range: string; arthritis_typ
 export let dataMode = localStorage.getItem('arthritrack-mode') || 'real'
 export function setMode(mode: string) { dataMode = mode; localStorage.setItem('arthritrack-mode', mode) }
 export async function api<T = any>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const res = await fetch('/api' + path, { method, credentials: 'include', headers: { 'Content-Type': 'application/json', 'X-Data-Mode': dataMode }, body: body === undefined ? undefined : JSON.stringify(body) })
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000)
+  let res:Response
+  try{res=await fetch('/api' + path, { method, credentials: 'include', signal:controller.signal, headers: { 'Content-Type': 'application/json', 'X-Data-Mode': dataMode }, body: body === undefined ? undefined : JSON.stringify(body) })}catch(error){if((error as Error).name==='AbortError')throw new Error('The request took too long. Your unsaved information is still on this screen; please retry.');throw error}finally{clearTimeout(timer)}
   if (!res.ok) { const error = await res.json().catch(() => ({})); throw new Error(typeof error.detail === 'string' ? error.detail : `Request failed (${res.status}). Check your entries and try again.`) }
   return res.headers.get('content-type')?.includes('application/pdf') ? await res.blob() as T : res.json()
 }

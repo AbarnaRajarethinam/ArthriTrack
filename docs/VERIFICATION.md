@@ -1,5 +1,14 @@
 # Verification and remaining scope
 
+## Enhancement verification — 15 October 2026
+
+- Backend: **19 passed** against isolated test databases. Added regression coverage for capture sufficiency, one-observation rejection, idempotent saves, pagination/summary behavior, timezone-aware latest selection, source-correct symptom evidence, and report snapshot redaction/deletion.
+- Vision/calibration: **11 passed**. Added guided calibration completion/limited/timeout/pause/retry checks and regressions for invalid-segment speed and opposition target contamination.
+- Frontend TypeScript and production build: **passed**.
+- Browser: **4 passed** in Microsoft Edge against an isolated migrated SQLite database and dedicated ports: desktop/mobile application journeys and local MediaPipe model initialization/empty-frame rejection.
+- Alembic initial migration was applied to the isolated browser-test database. The enhancement stores new assessment provenance inside the existing versioned JSON record envelope, so no destructive schema migration is required.
+- Physical-hand accuracy, anatomical handedness across real front/rear cameras, clinical validity, screen-reader testing, and representative-user usability remain manual verification requirements. The automated browser journey checks camera-denial recovery and actual model loading but does not simulate a complete hand trajectory through the UI.
+
 Executed on 13 October 2026 in the supplied Windows workspace.
 
 ## Executed checks

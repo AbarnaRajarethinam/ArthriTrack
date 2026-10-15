@@ -8,7 +8,7 @@ def make_pdf(report):
     def p(text,style='BodyText'): story.append(Paragraph(escape(str(text)).replace('\n','<br/>'),styles[style])); story.append(Spacer(1,8))
     p('ArthriTrack | Appointment summary','Title'); p('DEMO DATA - SYNTHETIC EXAMPLES' if report['mode']=='demo' else 'Personal self-care record','Heading2')
     p(f"Identifier: {report['identifier'] or 'Not provided'} | {report['start']} to {report['end']}")
-    for kind,label,fields in [('assessments','Camera-estimated movement',['recorded_at','hand','assessment_type','range_of_motion','quality_status']),('symptoms','Self-reported symptoms',['recorded_at','hand','pain_level','stiffness_level']),('routines','User-entered prescribed routines',['item_name','instructions','reminder_time']),('logs','Self-reported routine history',['scheduled_date','routine_id','status','reason'])]:
+    for kind,label,fields in [('assessments','Camera-estimated movement',['recorded_at','hand','assessment_type','range_of_motion','measurement_unit','quality_status','algorithm_version']),('symptoms','Self-reported symptoms',['recorded_at','hand','pain_level','stiffness_level','morning_stiffness_minutes','swelling','daily_difficulty']),('routines','User-entered prescribed routines',['item_name','instructions','reminder_time']),('logs','Self-reported routine history',['scheduled_date','routine_id','status','reason'])]:
         if kind not in report: continue
         p(label,'Heading2')
         if not report[kind]: p('No records in the selected range.'); continue

@@ -31,12 +31,13 @@ On macOS/Linux, replace `.venv\Scripts\python.exe` with `.venv/bin/python` and u
 ## Walkthrough
 
 1. Complete the four onboarding steps. Personal information is optional; data-processing consent is required. Progress persists on the server.
-2. Open **Hand Assessment**, choose a hand/movement and allow the camera. Keep a single palm in view. Calibrate with comfortable movement for eight seconds, then start the countdown. Real MediaPipe landmarks drive the overlay and measurements.
-3. Complete cycles or finish early. Review quality and results, then explicitly save. Uncertain/rejected sessions are stored for inspection but excluded from baselines. Three valid sessions per hand/movement establish a median reference; six enable repeated-change classification.
-4. Add, edit and delete entries in **Symptom Journal**. **Care Routine** records your existing prescribed instructions and daily schedule, with Completed, Missed, Skipped and Not Sure logs.
-5. Review actual saved records in **My Progress**. Ask **AI Companion** for bounded explanations; its deterministic provider requires no key.
-6. In **Appointment Prep**, select dates/sections, edit notes/questions, generate the draft, review it, check the export confirmation and download a real PDF. No report is automatically shared.
-7. Use **Settings** to change readability, export JSON, or delete all data for the current browser identity.
+2. Open **Hand Assessment**, choose a hand/movement and allow the camera. A seven-step guide covers camera positioning, a movement demonstration, movement-based calibration, readiness, recording, and one results screen. Real MediaPipe landmarks drive the overlay and measurements.
+3. Calibration advances only after the expected comfortable start, moved, and return positions have sufficient clear observations. Thumb opposition calibrates index, middle, ring, and little targets separately. Limited movement can be recorded as limited experimental evidence; insufficient evidence leads to a retry rather than an invented result.
+4. Complete cycles or finish early. Review capture sufficiency and results, then explicitly save or retry. Limited/retry captures are stored for inspection but excluded from compatible baselines. Three sufficiently captured sessions per hand/movement/algorithm establish a median app reference; six enable a descriptive repeated-change comparison.
+5. Add, edit and delete entries in **Symptom Journal**. **Care Routine** records your existing prescribed instructions and daily schedule, with Completed, Missed, Skipped and Not Sure logs.
+6. Review actual saved records in **My Progress**. **Record Insights** provides bounded deterministic explanations and requires no model key.
+7. In **Appointment Prep**, select dates/sections, edit notes/questions, generate the draft, review it, check the export confirmation and download a real PDF. No report is automatically shared.
+8. Use **Settings** to change readability, withdraw/restore storage consent, export JSON, or delete all data for the current browser identity. Withdrawing consent preserves export/deletion access while blocking new real-mode records.
 
 ## Demo mode
 
@@ -59,10 +60,11 @@ Camera access needs localhost or HTTPS. Permission denial, unavailable cameras, 
 - Fist: mean estimated PIP flexion across four fingers; calibrated hysteresis plus dwell prevents noise from becoming repetitions.
 - Spread: average adjacent fingertip separation angles about the wrist.
 - Opposition: thumb/fingertip distance divided by palm width, with ordered targets and approach/release detection. Proximity is not verified physical contact.
-- Range: 5th–95th percentile span of accepted samples, in degrees (fist/spread) or palm widths (opposition).
-- Speed: average absolute frame-to-frame change over contiguous accepted samples.
-- Consistency: descriptive sample-speed variability, not a disease or clinical score.
-- Quality: VALID requires at least 85% usable frames, three complete repetitions, five seconds and no more than five interruptions. UNCERTAIN requires at least 65% usable frames and one repetition. Otherwise RETRY_REQUIRED. All thresholds are prototype parameters.
+- Movement amplitude: 5th–95th percentile span of accepted samples, in degrees for fist/spread. Opposition computes target-specific spans before averaging, in palm widths, so changing target fingers cannot create false amplitude.
+- Speed: average absolute frame-to-frame change within one contiguous valid segment and one opposition target. Invalid gaps, pauses, and target changes are excluded from derivatives.
+- Cycle repeatability: experimental similarity of completed cycle amplitudes, reported only after at least two cycles. This replaces the old instantaneous-speed “consistency” definition for `prototype-3`; historical `prototype-2` data keeps its original meaning.
+- Capture sufficiency: `SUFFICIENT_CAPTURE` requires at least 30 accepted observations, at least three accepted seconds, at least 85% accepted observations, three complete repetitions, five elapsed seconds, and no more than five interruptions. `LIMITED_CAPTURE` requires at least 10 observations, one accepted second, 65% acceptance and one repetition. Otherwise the result is `RETRY_RECOMMENDED`. These experimental rules describe captured evidence, not accuracy or clinical validity.
+- Provenance: new saves use algorithm `prototype-3`, protocol `guided-1`, the local MediaPipe model identifier, units, repetition target, calibration status/span, per-finger summaries, accepted duration, client capture ID, and server receipt time. Historical records are preserved without fabricated metadata and are not mixed into a `prototype-3` baseline.
 
 The tracker checks visibility, one-hand presence, handedness classification confidence, finite geometry, orientation changes and implausible jumps. Handedness confidence is not landmark confidence. Lighting quality is addressed through detection and visibility feedback, not a validated illumination measurement. Processing is throttled to about 15 Hz on the main thread; CPU/browser performance varies.
 

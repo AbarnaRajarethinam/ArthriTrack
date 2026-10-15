@@ -15,3 +15,5 @@ export function features(points:Point[]){
  const proximity=[8,12,16,20].map(i=>distance(points[4],points[i])/width)
  return [flexion,spread,...proximity].every(Number.isFinite)?{flexion,spread,proximity,joints}:null
 }
+
+export const fingerNames=['index','middle','ring','little'] as const
