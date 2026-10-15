@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 from sqlalchemy import create_engine, select, ForeignKey, String, JSON, event, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
-from services.analytics import analyse, explain
+from services.analytics import analyse, explain, resolve_context
 from services.reports import make_pdf
 from services.provider import validated_explanation
 
@@ -245,7 +245,7 @@ def trends(hand:Literal['left','right']='left',assessment_type:Literal['fist','s
 @app.post('/api/companion/message')
 @app.post('/api/insights/generate')
 def message(payload:Message,user=Depends(identity),db=Depends(db_session),m=Depends(mode)):
-    consent(user,m);result=validated_explanation(explain(payload.message,analyse(rows(db,user,'assessments',m),payload.hand,payload.assessment_type),rows(db,user,'symptoms',m))); return add(db,user,'insights',m,{'prompt':payload.message,**result,'created_at':now()})
+    consent(user,m);hand,kind=resolve_context(payload.message,payload.hand,payload.assessment_type);trend=analyse(rows(db,user,'assessments',m),hand,kind);result=validated_explanation(explain(payload.message,trend,rows(db,user,'symptoms',m),hand,kind)); return add(db,user,'insights',m,{'prompt':payload.message,'hand':hand,'assessment_type':kind,**result,'created_at':now()})
 @app.get('/api/insights')
 def insights(user=Depends(identity),db=Depends(db_session),m=Depends(mode)): return rows(db,user,'insights',m)
 @app.post('/api/reports/preview')

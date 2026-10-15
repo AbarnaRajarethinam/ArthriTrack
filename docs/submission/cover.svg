@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">ArthriTrack — AI Healthier Every Day</title>
+  <desc id="desc">A 16 by 9 abstract cover illustration for a hand self-care tracking prototype. It lists experimental movement estimates, self-reported context, and appointment preparation. This artwork is not a screenshot.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b252e"/><stop offset=".55" stop-color="#123e46"/><stop offset="1" stop-color="#176c69"/></linearGradient>
+    <linearGradient id="orb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9ce3cf" stop-opacity=".95"/><stop offset="1" stop-color="#42a9a1" stop-opacity=".2"/></linearGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b5f4dd"/><stop offset="1" stop-color="#60c6b3"/></linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="42"/></filter>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <circle cx="1280" cy="220" r="210" fill="#48b5a5" opacity=".16" filter="url(#blur)"/>
+  <circle cx="1390" cy="720" r="230" fill="#9ce3cf" opacity=".12" filter="url(#blur)"/>
+  <path d="M0 690 C290 590 470 770 760 690 S1280 600 1600 700 V900 H0Z" fill="#071d27" opacity=".35"/>
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="112" y="105" width="340" height="44" rx="22" fill="#d7f5e9" fill-opacity=".12" stroke="#a6e4d0" stroke-opacity=".42"/>
+    <circle cx="139" cy="127" r="6" fill="#a8ebd1"/>
+    <text x="158" y="134" fill="#d4f4e7" font-size="17" letter-spacing="2.3">HEALTHCARE · NTU LKC MEDICINE</text>
+    <text x="108" y="320" fill="#f4fbf8" font-size="86" font-weight="700" letter-spacing="-2">ArthriTrack</text>
+    <text x="112" y="387" fill="#a9e7d4" font-size="32" font-weight="500">AI Healthier Every Day</text>
+    <text x="112" y="446" fill="#e4f2ee" font-size="23">Intelligent support for long-term self-care</text>
+    <text x="112" y="502" fill="#b8ceca" font-size="18">Camera-guided hand tracking · personal trends · appointment preparation</text>
+    <rect x="112" y="566" width="578" height="1" fill="#c3e7dc" opacity=".3"/>
+    <text x="112" y="615" fill="#c6ddd6" font-size="18">Experimental camera estimates</text>
+    <circle cx="101" cy="608" r="5" fill="#84d5be"/>
+    <text x="112" y="654" fill="#c6ddd6" font-size="18">Self-reported symptoms and care routine</text>
+    <circle cx="101" cy="647" r="5" fill="#84d5be"/>
+    <text x="112" y="693" fill="#c6ddd6" font-size="18">User-reviewed appointment summary</text>
+    <circle cx="101" cy="686" r="5" fill="#84d5be"/>
+    <text x="112" y="792" fill="#8da9a5" font-size="15" letter-spacing="1.6">SELF-CARE PROTOTYPE · NOT A DIAGNOSTIC TOOL</text>
+  </g>
+  <g transform="translate(880 100)">
+    <circle cx="300" cy="350" r="275" fill="url(#orb)" opacity=".17" stroke="#b8efda" stroke-opacity=".3"/>
+    <circle cx="300" cy="350" r="216" fill="#d8f7ea" fill-opacity=".045" stroke="#b8efda" stroke-opacity=".25" stroke-dasharray="5 12"/>
+    <g fill="none" stroke="url(#line)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M256 494 C242 458 238 427 241 389 L248 291 C250 267 273 263 282 286 L284 375 L294 194 C296 165 323 163 330 191 L326 365 L344 215 C348 187 375 189 380 218 L372 377 L397 253 C403 225 429 231 432 259 L414 399 C408 454 389 496 359 528 C338 552 291 546 273 522Z"/>
+      <path d="M244 414 L210 354 C196 329 215 309 235 326 L265 363"/>
+      <path d="M286 375 C310 391 343 392 372 377" stroke-opacity=".52" stroke-width="7"/>
+    </g>
+    <g fill="#baf1dc" stroke="#134d4c" stroke-width="4">
+      <circle cx="282" cy="286" r="9"/><circle cx="294" cy="194" r="9"/><circle cx="330" cy="191" r="9"/><circle cx="380" cy="218" r="9"/><circle cx="432" cy="259" r="9"/><circle cx="210" cy="354" r="9"/>
+    </g>
+    <path d="M167 602 C236 565 299 585 354 568 S464 548 514 565" fill="none" stroke="#a7e7d0" stroke-opacity=".55" stroke-width="3" stroke-dasharray="7 12"/>
+    <circle cx="167" cy="602" r="7" fill="#a7e7d0"/><circle cx="354" cy="568" r="7" fill="#a7e7d0"/><circle cx="514" cy="565" r="7" fill="#a7e7d0"/>
+    <text x="150" y="650" fill="#a9c9c1" font-family="Segoe UI, Arial, sans-serif" font-size="15" letter-spacing="1.4">TRACK · REFLECT · PREPARE</text>
+  </g>
+</svg>
