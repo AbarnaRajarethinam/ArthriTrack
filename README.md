@@ -4,13 +4,13 @@ A working local-first arthritis self-care MVP built with React 19, TypeScript, V
 
 ## Start on Windows (PowerShell)
 
-Prerequisites: Python 3.12 or later and Node.js 22.12 or later recommended. The existing environment uses Python 3.13 and Node 20.12.2; see verification notes for actual checks.
+Prerequisites: Python 3.12 or later (the backend Docker image uses Python 3.12) and Node.js 22.12 or later recommended for the frontend toolchain.
 
 From the project root:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.lock.txt
 cd backend
 ..\.venv\Scripts\python.exe -m alembic upgrade head
 ..\.venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 8000
@@ -26,7 +26,7 @@ npm run dev
 
 Open **http://localhost:5173**. Keep the same hostname/browser: localhost and 127.0.0.1 have separate cookies. The API documentation is at http://127.0.0.1:8000/docs. `.env.example` documents configuration; environment variables must be set in the shell or deployment environment (the app does not automatically load `.env`).
 
-On macOS/Linux, replace `.venv\Scripts\python.exe` with `.venv/bin/python` and use forward slashes. Run Alembic and Uvicorn from `backend/`.
+The pinned backend environment is installed from `backend\requirements.lock.txt`; `backend\requirements.txt` lists the direct packages without pins. On macOS/Linux, replace `.venv\Scripts\python.exe` with `.venv/bin/python` and use forward slashes. Run Alembic and Uvicorn from `backend/` as above. On Windows, `start-backend.ps1` runs the migration and then starts Uvicorn with the same commands.
 
 ## Walkthrough
 
